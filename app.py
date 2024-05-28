@@ -1,45 +1,90 @@
-from flask import Flask, render_template, redirect, url_for, flash
-from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField
-from wtforms.validators import DataRequired
+from flask import Flask, render_template, request, redirect, url_for, session, flash
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your_secret_key'
+app.secret_key = 'your_secret_key'
 
-# Sample data for products
-products = [
-    {"id": 1, "name": "Product 1", "price": 10.0},
-    {"id": 2, "name": "Product 2", "price": 20.0},
-    {"id": 3, "name": "Product 3", "price": 30.0},
-]
+# Dummy user data for authentication
+users = {
+    'ayush_pundhir': generate_password_hash('password123')
+}
 
-# Sample data for users
-users = [
-    {"username": "user1", "password": "password1"},
-    {"username": "user2", "password": "password2"},
-]
+class BankAccount:
+    def __init__(self, account_number, account_holder):
+        self.account_number = account_number
+        self.account_holder = account_holder
+        self.balance = 0
 
-class LoginForm(FlaskForm):
-    username = StringField('Username', validators=[DataRequired()])
-    password = PasswordField('Password', validators=[DataRequired()])
-    submit = SubmitField('Login')
+    def deposit(self, amount):
+        if amount > 0:
+            self.balance += amount
+            return True
+        return False
+
+    def withdraw(self, amount):
+        if 0 < amount <= self.balance:
+            self.balance -= amount
+            return True
+        return False
+
+    def check_balance(self):
+        return self.balance
+
+# Create a global account for simplicity
+account = BankAccount("123456789", "Ayush Pundhir")
 
 @app.route('/')
 def index():
-    return render_template('index.html', products=products)
+    if 'username' in session:
+        return render_template('index.html', account=account)
+    return redirect(url_for('login'))
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    form = LoginForm()
-    if form.validate_on_submit():
-        username = form.username.data
-        password = form.password.data
-        if any(user['username'] == username and user['password'] == password for user in users):
-            flash('Login successful!', 'success')
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        if username in users and check_password_hash(users[username], password):
+            session['username'] = username
             return redirect(url_for('index'))
         else:
-            flash('Login failed. Check your username and password.', 'danger')
-    return render_template('login.html', form=form)
+            flash('Invalid username or password')
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    session.pop('username', None)
+    return redirect(url_for('login'))
+
+@app.route('/deposit', methods=['GET', 'POST'])
+def deposit():
+    if 'username' not in session:
+        return redirect(url_for('login'))
+    if request.method == 'POST':
+        amount = float(request.form['amount'])
+        if account.deposit(amount):
+            return redirect(url_for('index'))
+        else:
+            flash('Invalid deposit amount')
+    return render_template('deposit.html')
+
+@app.route('/withdraw', methods=['GET', 'POST'])
+def withdraw():
+    if 'username' not in session:
+        return redirect(url_for('login'))
+    if request.method == 'POST':
+        amount = float(request.form['amount'])
+        if account.withdraw(amount):
+            return redirect(url_for('index'))
+        else:
+            flash('Invalid withdrawal amount or insufficient funds')
+    return render_template('withdraw.html')
+
+@app.route('/balance')
+def balance():
+    if 'username' not in session:
+        return redirect(url_for('login'))
+    return render_template('balance.html', balance=account.check_balance())
 
 if __name__ == '__main__':
     app.run(debug=True)

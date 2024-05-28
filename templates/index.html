@@ -2,16 +2,17 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>E-commerce Website</title>
+    <title>Simple Banking System</title>
 </head>
 <body>
-    <h1>Welcome to our E-commerce Website</h1>
-    <h2>Products</h2>
+    <h1>Welcome to the Simple Banking System</h1>
+    <p>Account Holder: {{ account.account_holder }}</p>
+    <p>Account Number: {{ account.account_number }}</p>
     <ul>
-        {% for product in products %}
-            <li>{{ product.name }} - ${{ product.price }}</li>
-        {% endfor %}
+        <li><a href="{{ url_for('deposit') }}">Deposit</a></li>
+        <li><a href="{{ url_for('withdraw') }}">Withdraw</a></li>
+        <li><a href="{{ url_for('balance') }}">Check Balance</a></li>
+        <li><a href="{{ url_for('logout') }}">Logout</a></li>
     </ul>
 </body>
 </html>
